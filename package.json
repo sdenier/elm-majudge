@@ -10,7 +10,7 @@
     "elm-live": "^2.7.4"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "elm-live src/Main.elm --open"
   },
   "author": "",
   "license": "ISC"
