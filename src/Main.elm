@@ -1,6 +1,8 @@
 module Main exposing (..)
 
 import Html exposing (Html)
+import Html exposing (Html)
+import Html.Attributes as Attrs
 import Dict exposing (Dict)
 
 
@@ -39,13 +41,30 @@ type Rank
     | ToReject
 
 
+allRankOptions : List String
+allRankOptions =
+    ""
+        :: List.map toString
+            [ VeryGood
+            , Good
+            , Satisfactory
+            , Fair
+            , Insufficient
+            , ToReject
+            ]
+
+
 type alias Vote =
-    Dict Voter (Dict Candidate Rank)
+    Dict Candidate Rank
+
+
+type alias Votes =
+    Dict Voter Vote
 
 
 type alias Model =
     { candidates : Candidates
-    , vote : Vote
+    , vote : Votes
     }
 
 
@@ -54,9 +73,9 @@ initialModel =
     Model
         [ "Titi", "Tata", "Tutu" ]
         (Dict.fromList
-            [ ( "Abbie", Dict.empty )
-            , ( "Bob", Dict.empty )
-            , ( "Cal", Dict.empty )
+            [ ( "Abbie", Dict.singleton "Titi" Good )
+            , ( "Bob", Dict.singleton "Tata" VeryGood )
+            , ( "Cal", Dict.singleton "Titi" ToReject )
             ]
         )
 
@@ -73,27 +92,65 @@ init =
 view : Model -> Html msg
 view model =
     Html.div []
-        [ Html.div []
-            (List.map viewCandidate model.candidates)
-        , Html.div []
-            (List.map viewVoterVote (Dict.toList model.vote))
+        [ Html.table []
+            [ viewCandidatesHeader model.candidates
+            , viewVotes model
+            ]
+        ]
+
+
+viewCandidatesHeader : Candidates -> Html msg
+viewCandidatesHeader candidates =
+    Html.thead []
+        [ Html.tr []
+            (List.map viewCandidate ("Candidates:" :: candidates))
         ]
 
 
 viewCandidate : Candidate -> Html msg
 viewCandidate candidate =
-    Html.div []
+    Html.th []
         [ Html.text candidate
         ]
 
 
-viewVoterVote : ( Voter, Dict a b ) -> Html msg
-viewVoterVote ( voter, votes ) =
-    Html.div []
-        [ Html.span []
-            [ Html.text voter
+viewVotes : Model -> Html msg
+viewVotes model =
+    Html.tbody []
+        (List.map (viewVoterRow model) (Dict.toList model.vote))
+
+
+viewVoterRow : Model -> ( Voter, Vote ) -> Html msg
+viewVoterRow model ( voter, vote ) =
+    Html.tr []
+        ((Html.td [] [ Html.text voter ])
+            :: viewVoterVotes model.candidates vote
+        )
+
+
+viewVoterVotes : Candidates -> Vote -> List (Html msg)
+viewVoterVotes candidates vote =
+    List.map (viewVoterVote vote) candidates
+
+
+viewVoterVote : Vote -> Candidate -> Html msg
+viewVoterVote vote candidate =
+    let
+        v =
+            Maybe.withDefault "" (Maybe.map toString (Dict.get candidate vote))
+    in
+        Html.td []
+            [ Html.select []
+                (List.map (viewVoteOption v) allRankOptions)
             ]
+
+
+viewVoteOption : String -> String -> Html msg
+viewVoteOption vote rank =
+    Html.option
+        [ Attrs.selected (vote == rank)
         ]
+        [ Html.text rank ]
 
 
 
