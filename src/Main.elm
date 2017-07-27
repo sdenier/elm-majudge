@@ -3,6 +3,7 @@ module Main exposing (..)
 import Html exposing (Html)
 import Html exposing (Html)
 import Html.Attributes as Attrs
+import Html.Events as Events
 import Dict exposing (Dict)
 
 
@@ -89,7 +90,7 @@ init =
 -- View
 
 
-view : Model -> Html msg
+view : Model -> Html Msg
 view model =
     Html.div []
         [ Html.table []
@@ -114,33 +115,33 @@ viewCandidate candidate =
         ]
 
 
-viewVotes : Model -> Html msg
+viewVotes : Model -> Html Msg
 viewVotes model =
     Html.tbody []
         (List.map (viewVoterRow model) (Dict.toList model.vote))
 
 
-viewVoterRow : Model -> ( Voter, Vote ) -> Html msg
+viewVoterRow : Model -> ( Voter, Vote ) -> Html Msg
 viewVoterRow model ( voter, vote ) =
     Html.tr []
         ((Html.td [] [ Html.text voter ])
-            :: viewVoterVotes model.candidates vote
+            :: viewVoterVotes model.candidates voter vote
         )
 
 
-viewVoterVotes : Candidates -> Vote -> List (Html msg)
-viewVoterVotes candidates vote =
-    List.map (viewVoterVote vote) candidates
+viewVoterVotes : Candidates -> Voter -> Vote -> List (Html Msg)
+viewVoterVotes candidates voter vote =
+    List.map (viewVoterVote voter vote) candidates
 
 
-viewVoterVote : Vote -> Candidate -> Html msg
-viewVoterVote vote candidate =
+viewVoterVote : Voter -> Vote -> Candidate -> Html Msg
+viewVoterVote voter vote candidate =
     let
         v =
             Maybe.withDefault "" (Maybe.map toString (Dict.get candidate vote))
     in
         Html.td []
-            [ Html.select []
+            [ Html.select [ Events.onInput (CastVote voter candidate) ]
                 (List.map (viewVoteOption v) allRankOptions)
             ]
 
@@ -158,9 +159,46 @@ viewVoteOption vote rank =
 
 
 type Msg
-    = Noop
+    = CastVote Voter Candidate String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
-    ( model, Cmd.none )
+    case message of
+        CastVote voter candidate rankStr ->
+            let
+                voterVote =
+                    Maybe.withDefault Dict.empty (Dict.get voter model.vote)
+
+                updatedVote =
+                    Dict.insert candidate (parseRank rankStr) voterVote
+
+                updatedVotes =
+                    Dict.insert voter updatedVote model.vote
+            in
+                ( { model | vote = updatedVotes }, Cmd.none )
+
+
+parseRank : String -> Rank
+parseRank s =
+    case s of
+        "VeryGood" ->
+            VeryGood
+
+        "Good" ->
+            Good
+
+        "Satisfactory" ->
+            Satisfactory
+
+        "Fair" ->
+            Fair
+
+        "Insufficient" ->
+            Insufficient
+
+        "ToReject" ->
+            ToReject
+
+        _ ->
+            ToReject
