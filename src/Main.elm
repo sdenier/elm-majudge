@@ -25,12 +25,12 @@ type alias Candidate =
     String
 
 
-type alias Candidates =
-    List Candidate
-
-
-type alias Voter =
+type alias Elector =
     String
+
+
+type alias Electors =
+    List Elector
 
 
 type Rank
@@ -56,15 +56,15 @@ allRankOptions =
 
 
 type alias Vote =
-    Dict Candidate Rank
+    Dict Elector Rank
 
 
 type alias Votes =
-    Dict Voter Vote
+    Dict Candidate Vote
 
 
 type alias Model =
-    { candidates : Candidates
+    { electors : Electors
     , vote : Votes
     }
 
@@ -72,7 +72,7 @@ type alias Model =
 initialModel : Model
 initialModel =
     Model
-        [ "Titi", "Tata", "Tutu" ]
+        [ "Titi", "Tata", "Tutu", "Toto" ]
         (Dict.fromList
             [ ( "Abbie", Dict.singleton "Titi" Good )
             , ( "Bob", Dict.singleton "Tata" VeryGood )
@@ -94,22 +94,22 @@ view : Model -> Html Msg
 view model =
     Html.div []
         [ Html.table []
-            [ viewCandidatesHeader model.candidates
+            [ viewElectorsHeader model.electors
             , viewVotes model
             ]
         ]
 
 
-viewCandidatesHeader : Candidates -> Html msg
-viewCandidatesHeader candidates =
+viewElectorsHeader : Electors -> Html msg
+viewElectorsHeader electors =
     Html.thead []
         [ Html.tr []
-            (List.map viewCandidate ("Candidates:" :: candidates))
+            (List.map viewElector ("Electors:" :: electors))
         ]
 
 
-viewCandidate : Candidate -> Html msg
-viewCandidate candidate =
+viewElector : Elector -> Html msg
+viewElector candidate =
     Html.th []
         [ Html.text candidate
         ]
@@ -118,30 +118,25 @@ viewCandidate candidate =
 viewVotes : Model -> Html Msg
 viewVotes model =
     Html.tbody []
-        (List.map (viewVoterRow model) (Dict.toList model.vote))
+        (List.map (viewCandidateVoteDetails model) (Dict.toList model.vote))
 
 
-viewVoterRow : Model -> ( Voter, Vote ) -> Html Msg
-viewVoterRow model ( voter, vote ) =
+viewCandidateVoteDetails : Model -> ( Candidate, Vote ) -> Html Msg
+viewCandidateVoteDetails model ( candidate, vote ) =
     Html.tr []
-        ((Html.td [] [ Html.text voter ])
-            :: viewVoterVotes model.candidates voter vote
+        ((Html.td [] [ Html.text candidate ])
+            :: List.map (viewElectorVoteFor candidate vote) model.electors
         )
 
 
-viewVoterVotes : Candidates -> Voter -> Vote -> List (Html Msg)
-viewVoterVotes candidates voter vote =
-    List.map (viewVoterVote voter vote) candidates
-
-
-viewVoterVote : Voter -> Vote -> Candidate -> Html Msg
-viewVoterVote voter vote candidate =
+viewElectorVoteFor : Candidate -> Vote -> Elector -> Html Msg
+viewElectorVoteFor candidate vote elector =
     let
         v =
-            Maybe.withDefault "" (Maybe.map toString (Dict.get candidate vote))
+            Maybe.withDefault "" (Maybe.map toString (Dict.get elector vote))
     in
         Html.td []
-            [ Html.select [ Events.onInput (CastVote voter candidate) ]
+            [ Html.select [ Events.onInput (CastVote candidate elector) ]
                 (List.map (viewVoteOption v) allRankOptions)
             ]
 
@@ -159,22 +154,22 @@ viewVoteOption vote rank =
 
 
 type Msg
-    = CastVote Voter Candidate String
+    = CastVote Candidate Elector String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     case message of
-        CastVote voter candidate rankStr ->
+        CastVote candidate elector rankStr ->
             let
-                voterVote =
-                    Maybe.withDefault Dict.empty (Dict.get voter model.vote)
+                candidateVote =
+                    Maybe.withDefault Dict.empty (Dict.get candidate model.vote)
 
                 updatedVote =
-                    Dict.insert candidate (parseRank rankStr) voterVote
+                    Dict.insert elector (parseRank rankStr) candidateVote
 
                 updatedVotes =
-                    Dict.insert voter updatedVote model.vote
+                    Dict.insert candidate updatedVote model.vote
             in
                 ( { model | vote = updatedVotes }, Cmd.none )
 
