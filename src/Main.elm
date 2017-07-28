@@ -5,6 +5,7 @@ import Html exposing (Html)
 import Html.Attributes as Attrs
 import Html.Events as Events
 import Dict exposing (Dict)
+import Material.Scheme
 
 
 main : Program Never Model Msg
@@ -97,7 +98,11 @@ view model =
             [ viewElectorsHeader model.electors
             , viewVotes model
             ]
+        , Html.button [ Attrs.class "mdl-button mdl-js-button mdl-button--fab mdl-button--colored" ]
+            [ Html.i [ Attrs.class "material-icons" ] [ Html.text "add" ]
+            ]
         ]
+        |> Material.Scheme.top
 
 
 viewElectorsHeader : Electors -> Html msg
